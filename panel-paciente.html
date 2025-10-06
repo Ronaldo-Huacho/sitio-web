@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediSecure - Portal del Paciente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { 
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(135deg, #064e3b 0%, #059669 25%, #10b981 50%, #34d399 75%, #6ee7b7 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 20s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .glass-header {
+            background: rgba(6, 78, 59, 0.95);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .modern-input {
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s;
+        }
+
+        .modern-input:focus {
+            border-color: #10b981;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
+            background-size: 200% 200%;
+            animation: gradientFlow 3s ease infinite;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(16, 185, 129, 0.4);
+        }
+
+        @keyframes gradientFlow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .service-card {
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .service-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .appointment-card {
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+
+        .appointment-card:hover {
+            transform: translateX(8px);
+            border-left-color: #10b981;
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2);
+        }
+
+        .tab-button {
+            transition: all 0.3s;
+        }
+
+        .tab-button.active {
+            background: white;
+            color: #059669;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="animated-bg"></div>
+
+    <header class="glass-header py-5 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-6">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
+                        <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">MediSecure</h1>
+                        <p class="text-sm text-green-200 font-medium" id="welcomeText">Portal del Paciente</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-3 bg-white bg-opacity-10 px-4 py-2 rounded-lg">
+                        <img id="userAvatar" class="w-10 h-10 rounded-full border-2 border-white" src="" alt="Avatar">
+                        <div>
+                            <p id="userName" class="text-white font-semibold text-sm"></p>
+                            <p id="userEmail" class="text-green-200 text-xs"></p>
+                        </div>
+                    </div>
+                    <button onclick="logout()" class="bg-white bg-opacity-10 hover:bg-opacity-20 text-white px-5 py-2.5 rounded-lg font-medium transition">
+                        Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8">
+        <div class="glass-card rounded-2xl mb-6">
+            <div class="flex border-b border-gray-200">
+                <button onclick="showTab('new')" id="tabNew" class="tab-button active flex-1 py-4 px-6 font-bold text-gray-700">
+                    Agendar Cita
+                </button>
+                <button onclick="showTab('list')" id="tabList" class="tab-button flex-1 py-4 px-6 font-bold text-gray-700">
+                    Mis Citas (<span id="appointmentCount">0</span>)
+                </button>
+                <button onclick="showTab('services')" id="tabServices" class="tab-button flex-1 py-4 px-6 font-bold text-gray-700">
+                    Servicios Médicos
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab: Agendar Cita -->
+        <div id="newTab" class="fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 glass-card rounded-2xl p-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Agendar Nueva Cita Médica</h2>
+                    
+                    <form id="appointmentForm" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    Especialidad Médica <span class="text-red-500">*</span>
+                                </label>
+                                <select id="specialty" required class="w-full px-4 py-3 modern-input rounded-xl bg-white">
+                                    <option value="">Seleccione una especialidad</option>
+                                    <option value="Medicina General">Medicina General</option>
+                                    <option value="Cardiología">Cardiología</option>
+                                    <option value="Dermatología">Dermatología</option>
+                                    <option value="Pediatría">Pediatría</option>
+                                    <option value="Ginecología">Ginecología</option>
+                                    <option value="Oftalmología">Oftalmología</option>
+                                    <option value="Traumatología">Traumatología</option>
+                                    <option value="Psicología">Psicología</option>
+                                    <option value="Neurología">Neurología</option>
+                                    <option value="Odontología">Odontología</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    Fecha de la Cita <span class="text-red-500">*</span>
+                                </label>
+                                <input type="date" id="appointmentDate" required class="w-full px-4 py-3 modern-input rounded-xl bg-white">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    Hora de la Cita <span class="text-red-500">*</span>
+                                </label>
+                                <select id="appointmentTime" required class="w-full px-4 py-3 modern-input rounded-xl bg-white">
+                                    <option value="">Seleccione una hora</option>
+                                    <option value="08:00">08:00 AM</option>
+                                    <option value="09:00">09:00 AM</option>
+                                    <option value="10:00">10:00 AM</option>
+                                    <option value="11:00">11:00 AM</option>
+                                    <option value="12:00">12:00 PM</option>
+                                    <option value="14:00">02:00 PM</option>
+                                    <option value="15:00">03:00 PM</option>
+                                    <option value="16:00">04:00 PM</option>
+                                    <option value="17:00">05:00 PM</option>
+                                </select>
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    Motivo de Consulta <span class="text-red-500">*</span>
+                                </label>
+                                <textarea id="reason" required rows="4" class="w-full px-4 py-3 modern-input rounded-xl bg-white" 
+                                    placeholder="Describa los síntomas o motivo de su consulta"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="bg-green-50 p-4 rounded-xl border-2 border-green-200">
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="checkbox" id="gdprConsent" required class="w-5 h-5 text-green-600 rounded">
+                                <span class="text-sm text-gray-700 font-medium">Acepto el tratamiento de mis datos personales conforme al GDPR</span>
+                            </label>
+                        </div>
+
+                        <button type="submit" class="w-full btn-primary text-white py-4 rounded-xl font-bold text-lg shadow-lg">
+                            Agendar Cita Médica
+                        </button>
+                    </form>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">Información Importante</h3>
+                        <div class="space-y-3 text-sm text-gray-600">
+                            <div class="flex items-start space-x-3">
+                                <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <p>Recibirás confirmación por WhatsApp en 24 horas</p>
+                            </div>
+                            <div class="flex items-start space-x-3">
+                                <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <p>Puedes modificar o cancelar tu cita hasta 24h antes</p>
+                            </div>
+                            <div class="flex items-start space-x-3">
+                                <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <p>Llega 15 minutos antes de tu cita</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-6 bg-gradient-to-br from-green-50 to-emerald-50">
+                        <h3 class="text-lg font-bold text-gray-800 mb-3">¿Necesitas ayuda?</h3>
+                        <p class="text-sm text-gray-600 mb-4">Nuestro equipo está disponible para asistirte</p>
+                        <button class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition">
+                            Contactar por WhatsApp
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Mis Citas -->
+        <div id="listTab" class="hidden">
+            <div class="glass-card rounded-2xl p-8 fade-in">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Mis Citas Programadas</h2>
+                    <div class="flex space-x-2">
+                        <button onclick="filterAppointments('all')" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium text-sm transition">
+                            Todas
+                        </button>
+                        <button onclick="filterAppointments('Pendiente')" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium text-sm transition">
+                            Pendientes
+                        </button>
+                        <button onclick="filterAppointments('Aprobada')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition">
+                            Aprobadas
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="appointmentsList" class="space-y-4">
+                    <!-- Citas aquí -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Servicios -->
+        <div id="servicesTab" class="hidden fade-in">
+            <div class="glass-card rounded-2xl p-8 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Nuestros Servicios Médicos</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="servicesList">
+                    <!-- Servicios aquí -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal para cambiar horario -->
+    <div id="rescheduleModal" class="modal">
+        <div class="glass-card rounded-2xl p-8 max-w-md w-full mx-4">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">Cambiar Horario de Cita</h3>
+            <form id="rescheduleForm" class="space-y-4">
+                <input type="hidden" id="rescheduleId">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Nueva Fecha</label>
+                    <input type="date" id="rescheduleDate" required class="w-full px-4 py-3 modern-input rounded-xl bg-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Nueva Hora</label>
+                    <select id="rescheduleTime" required class="w-full px-4 py-3 modern-input rounded-xl bg-white">
+                        <option value="">Seleccione una hora</option>
+                        <option value="08:00">08:00 AM</option>
+                        <option value="09:00">09:00 AM</option>
+                        <option value="10:00">10:00 AM</option>
+                        <option value="11:00">11:00 AM</option>
+                        <option value="12:00">12:00 PM</option>
+                        <option value="14:00">02:00 PM</option>
+                        <option value="15:00">03:00 PM</option>
+                        <option value="16:00">04:00 PM</option>
+                        <option value="17:00">05:00 PM</option>
+                    </select>
+                </div>
+                <div class="flex space-x-3">
+                    <button type="submit" class="flex-1 btn-primary text-white py-3 rounded-xl font-bold">
+                        Confirmar Cambio
+                    </button>
+                    <button type="button" onclick="closeRescheduleModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-3 rounded-xl font-bold transition">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const currentUser = JSON.parse(sessionStorage.getItem('currentPatient') || '{}');
+        let appointments = [];
+
+        const services = [
+            {
+                name: 'Medicina General',
+                description: 'Consultas generales, chequeos preventivos y seguimiento de tratamientos',
+                icon: '🩺',
+                color: 'from-blue-500 to-blue-700'
+            },
+            {
+                name: 'Cardiología',
+                description: 'Enfermedades del corazón, hipertensión, arritmias y prevención cardiovascular',
+                icon: '❤️',
+                color: 'from-red-500 to-rose-700'
+            },
+            {
+                name: 'Dermatología',
+                description: 'Problemas de piel, acné, manchas, lunares y tratamientos estéticos',
+                icon: '✨',
+                color: 'from-pink-500 to-pink-700'
+            },
+            {
+                name: 'Pediatría',
+                description: 'Atención integral para niños, vacunación y control de crecimiento',
+                icon: '👶',
+                color: 'from-yellow-500 to-orange-700'
+            },
+            {
+                name: 'Traumatología',
+                description: 'Fracturas, esguinces, dolores articulares y rehabilitación',
+                icon: '🦴',
+                color: 'from-gray-500 to-gray-700'
+            },
+            {
+                name: 'Oftalmología',
+                description: 'Problemas de visión, exámenes de vista y tratamiento ocular',
+                icon: '👁️',
+                color: 'from-cyan-500 to-blue-700'
+            }
+        ];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeUser();
+            setupDateValidation();
+            loadAppointments();
+            renderServices();
+        });
+
+        function initializeUser() {
+            if (!currentUser.email) {
+                currentUser.name = 'Usuario Demo';
+                currentUser.email = 'demo@medisecure.com';
+                currentUser.dni = '12345678';
+                currentUser.phone = '+51987654321';
+                currentUser.avatar = 'https://ui-avatars.com/api/?name=Usuario+Demo&background=10b981&color=fff&size=128';
+            } else {
+                currentUser.avatar = currentUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=10b981&color=fff&size=128`;
+            }
+
+            document.getElementById('welcomeText').textContent = `Bienvenido, ${currentUser.name}`;
+            document.getElementById('userName').textContent = currentUser.name;
+            document.getElementById('userEmail').textContent = currentUser.email;
+            document.getElementById('userAvatar').src = currentUser.avatar;
+        }
+
+        function setupDateValidation() {
+            const dateInput = document.getElementById('appointmentDate');
+            const rescheduleInput = document.getElementById('rescheduleDate');
+            const today = new Date();
+            today.setDate(today.getDate() + 1);
+            const maxDate = new Date();
+            maxDate.setDate(maxDate.getDate() + 90);
+
+            const minStr = today.toISOString().split('T')[0];
+            const maxStr = maxDate.toISOString().split('T')[0];
+
+            dateInput.min = minStr;
+            dateInput.max = maxStr;
+            rescheduleInput.min = minStr;
+            rescheduleInput.max = maxStr;
+        }
+
+        function loadAppointments() {
+            const stored = JSON.parse(localStorage.getItem('medisecure_appointments') || '[]');
+            appointments = stored.filter(apt => apt.email === currentUser.email);
+            document.getElementById('appointmentCount').textContent = appointments.length;
+            displayAppointments(appointments);
+        }
+
+        function saveAppointments() {
+            const allAppointments = JSON.parse(localStorage.getItem('medisecure_appointments') || '[]');
+            const others = allAppointments.filter(apt => apt.email !== currentUser.email);
+            localStorage.setItem('medisecure_appointments', JSON.stringify([...others, ...appointments]));
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('[id$="Tab"]').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+            
+            if (tab === 'new') {
+                document.getElementById('newTab').classList.remove('hidden');
+                document.getElementById('tabNew').classList.add('active');
+            } else if (tab === 'list') {
+                document.getElementById('listTab').classList.remove('hidden');
+                document.getElementById('tabList').classList.add('active');
+                displayAppointments(appointments);
+            } else if (tab === 'services') {
+                document.getElementById('servicesTab').classList.remove('hidden');
+                document.getElementById('tabServices').classList.add('active');
+            }
+        }
+
+        document.getElementById('appointmentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = {
+                id: Date.now().toString(),
+                fullName: currentUser.name,
+                dni: currentUser.dni,
+                email: currentUser.email,
+                phone: currentUser.phone,
+                specialty: document.getElementById('specialty').value,
+                appointmentDate: document.getElementById('appointmentDate').value,
+                appointmentTime: document.getElementById('appointmentTime').value,
+                reason: document.getElementById('reason').value,
+                status: 'Pendiente',
+                timestamp: new Date().toISOString(),
+                gdprConsent: 'Aceptado'
+            };
+
+            const duplicate = appointments.find(a => 
+                a.appointmentDate === formData.appointmentDate && 
+                a.appointmentTime === formData.appointmentTime &&
+                a.status !== 'Rechazada'
+            );
+
+            if (duplicate) {
+                showNotification('Ya tienes una cita para esta fecha y hora', 'error');
+                return;
+            }
+
+            appointments.push(formData);
+            saveAppointments();
+            
+            showNotification('Cita agendada correctamente. Recibirás confirmación pronto', 'success');
+            this.reset();
+            document.getElementById('appointmentCount').textContent = appointments.length;
+        });
+
+        function displayAppointments(list) {
+            const container = document.getElementById('appointmentsList');
+            
+            if (list.length === 0) {
+                container.innerHTML = '<div class="text-center py-16"><p class="text-gray-500 font-medium">No tienes citas programadas</p></div>';
+                return;
+            }
+
+            container.innerHTML = list.map(apt => `
+                <div class="appointment-card border-2 ${getStatusColor(apt.status).border} rounded-xl p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-16 h-16 bg-gradient-to-br ${getStatusColor(apt.status).gradient} rounded-xl flex items-center justify-center shadow-lg">
+                                <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-800 text-xl">${apt.specialty}</h4>
+                                <p class="text-sm text-gray-600 mt-1">${formatDate(apt.appointmentDate)} - ${apt.appointmentTime}</p>
+                            </div>
+                        </div>
+                        <span class="px-4 py-2 rounded-full text-sm font-bold ${getStatusColor(apt.status).badge}">
+                            ${apt.status}
+                        </span>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                        <p class="text-sm text-gray-700"><strong>Motivo:</strong> ${apt.reason}</p>
+                    </div>
+                    <div class="flex justify-between items-center pt-4 border-t">
+                        <p class="text-xs text-gray-500">Registrado: ${formatDateTime(apt.timestamp)}</p>
+                        <div class="flex space-x-2">
+                            ${apt.status === 'Pendiente' ? `
+                                <button onclick="openRescheduleModal('${apt.id}')" class="bg-gradient-to-r from-yellow-500 to-orange-600 hover:shadow-lg text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+                                    Cambiar Horario
+                                </button>
+                                <button onclick="cancelAppointment('${apt.id}')" class="bg-gradient-to-r from-red-500 to-rose-600 hover:shadow-lg text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+                                    Cancelar
+                                </button>
+                            ` : apt.status === 'Aprobada' ? `
+                                <button class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold cursor-default">
+                                    Confirmada
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterAppointments(status) {
+            const filtered = status === 'all' ? appointments : appointments.filter(a => a.status === status);
+            displayAppointments(filtered);
+        }
+
+        function renderServices() {
+            const container = document.getElementById('servicesList');
+            container.innerHTML = services.map(service => `
+                <div class="service-card glass-card rounded-2xl p-6">
+                    <div class="w-16 h-16 bg-gradient-to-br ${service.color} rounded-xl flex items-center justify-center mb-4 shadow-lg text-3xl">
+                        ${service.icon}
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">${service.name}</h3>
+                    <p class="text-sm text-gray-600">${service.description}</p>
+                </div>
+            `).join('');
+        }
+
+        function openRescheduleModal(id) {
+            const apt = appointments.find(a => a.id === id);
+            if (!apt) return;
+
+            document.getElementById('rescheduleId').value = id;
+            document.getElementById('rescheduleDate').value = apt.appointmentDate;
+            document.getElementById('rescheduleTime').value = apt.appointmentTime;
+            document.getElementById('rescheduleModal').classList.add('show');
+        }
+
+        function closeRescheduleModal() {
+            document.getElementById('rescheduleModal').classList.remove('show');
+            document.getElementById('rescheduleForm').reset();
+        }
+
+        document.getElementById('rescheduleForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('rescheduleId').value;
+            const newDate = document.getElementById('rescheduleDate').value;
+            const newTime = document.getElementById('rescheduleTime').value;
+            
+            const apt = appointments.find(a => a.id === id);
+            if (apt) {
+                apt.appointmentDate = newDate;
+                apt.appointmentTime = newTime;
+                apt.timestamp = new Date().toISOString();
+                
+                saveAppointments();
+                displayAppointments(appointments);
+                closeRescheduleModal();
+                showNotification('Horario cambiado exitosamente', 'success');
+            }
+        });
+
+        function cancelAppointment(id) {
+            const apt = appointments.find(a => a.id === id);
+            if (!apt) return;
+
+            if (confirm(`¿Estás seguro de cancelar la cita de ${apt.specialty}?`)) {
+                appointments = appointments.filter(a => a.id !== id);
+                saveAppointments();
+                displayAppointments(appointments);
+                document.getElementById('appointmentCount').textContent = appointments.length;
+                showNotification('Cita cancelada correctamente', 'success');
+            }
+        }
+
+        function getStatusColor(status) {
+            const colors = {
+                'Pendiente': { 
+                    border: 'border-orange-300 bg-orange-50',
+                    badge: 'bg-orange-100 text-orange-700',
+                    gradient: 'from-orange-500 to-orange-700'
+                },
+                'Aprobada': { 
+                    border: 'border-green-300 bg-green-50',
+                    badge: 'bg-green-100 text-green-700',
+                    gradient: 'from-green-500 to-emerald-700'
+                },
+                'Rechazada': { 
+                    border: 'border-red-300 bg-red-50',
+                    badge: 'bg-red-100 text-red-700',
+                    gradient: 'from-red-500 to-red-700'
+                }
+            };
+            return colors[status] || colors['Pendiente'];
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            return date.toLocaleDateString('es-PE', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function formatDateTime(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleString('es-PE', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function showNotification(message, type) {
+            const colors = {
+                success: 'bg-gradient-to-r from-green-500 to-emerald-600',
+                error: 'bg-gradient-to-r from-red-500 to-rose-600',
+                info: 'bg-gradient-to-r from-blue-500 to-indigo-600'
+            };
+            
+            const notification = document.createElement('div');
+            notification.className = `fixed top-6 right-6 ${colors[type]} text-white px-6 py-4 rounded-xl shadow-2xl z-50 font-semibold`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        function logout() {
+            if (confirm('¿Cerrar sesión?')) {
+                sessionStorage.removeItem('currentPatient');
+                showNotification('Cerrando sesión...', 'info');
+                setTimeout(() => window.location.href = 'login.html', 1000);
+            }
+        }
+    </script>
+</body>
+</html>

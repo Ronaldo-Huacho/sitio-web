@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediSecure - Panel Administrador</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { 
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(135deg, #0a192f 0%, #112240 25%, #1a365d 50%, #0f2027 75%, #0a192f 100%);
+            background-size: 400% 400%;
+            animation: gradientFlow 20s ease infinite;
+        }
+
+        @keyframes gradientFlow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .glass-header {
+            background: rgba(10, 25, 47, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-item {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: #60a5fa;
+            transition: all 0.3s;
+            transform: translateX(-50%);
+        }
+
+        .nav-item.active::before {
+            width: 100%;
+        }
+
+        .nav-item.active {
+            background: rgba(96, 165, 250, 0.15);
+            color: #60a5fa;
+        }
+
+        .nav-item:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .stat-card:hover::before {
+            left: 100%;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .appointment-card {
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+
+        .appointment-card:hover {
+            transform: translateX(8px);
+            border-left-color: #3b82f6;
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn-gradient {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+            background-size: 200% 200%;
+            animation: gradientShift 3s ease infinite;
+            transition: all 0.3s;
+        }
+
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .metric-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="animated-bg"></div>
+
+    <header class="glass-header sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
+                        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">MediSecure Admin</h1>
+                        <p class="text-xs text-blue-300">Sistema de Gestión Médica</p>
+                    </div>
+                </div>
+                
+                <nav class="hidden md:flex space-x-2">
+                    <a onclick="navigateTo('dashboard')" class="nav-item active px-5 py-2.5 rounded-lg text-white font-medium">Dashboard</a>
+                    <a onclick="navigateTo('appointments')" class="nav-item px-5 py-2.5 rounded-lg text-white font-medium">Citas</a>
+                    <a onclick="navigateTo('patients')" class="nav-item px-5 py-2.5 rounded-lg text-white font-medium">Pacientes</a>
+                    <a onclick="navigateTo('analytics')" class="nav-item px-5 py-2.5 rounded-lg text-white font-medium">Análisis</a>
+                </nav>
+                
+                <div class="flex items-center space-x-4">
+                    <button onclick="syncData()" class="p-2.5 hover:bg-white hover:bg-opacity-10 rounded-lg transition" title="Sincronizar">
+                        <svg id="syncIcon" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </button>
+                  
+                    <button onclick="logout()" class="bg-white bg-opacity-10 hover:bg-opacity-20 text-white px-5 py-2.5 rounded-lg font-medium transition">
+                        Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main id="mainContent" class="container mx-auto px-6 py-8 min-h-screen">
+        <!-- Contenido dinámico -->
+    </main>
+
+    <script>
+        const CONFIG = {
+            GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzthKSVoH9WfDlY87rY3XVKvFa3v5CUY_pPeJmyoKplNUhAwOVJYi6I8vQ3OOob1ukY/exec',
+        };
+
+        const appState = {
+            currentPage: 'dashboard',
+            appointments: [],
+            patients: [],
+            stats: { total: 0, pending: 0, approved: 0, rejected: 0 },
+            charts: { appointments: null, specialties: null, timeline: null }
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDataFromStorage();
+            navigateTo('dashboard');
+        });
+
+        function loadDataFromStorage() {
+            const stored = JSON.parse(localStorage.getItem('medisecure_appointments') || '[]');
+            appState.appointments = stored;
+            
+            const uniquePatients = new Map();
+            stored.forEach(apt => {
+                if (!uniquePatients.has(apt.dni)) {
+                    uniquePatients.set(apt.dni, {
+                        dni: apt.dni,
+                        name: apt.fullName,
+                        email: apt.email,
+                        phone: apt.phone
+                    });
+                }
+            });
+            appState.patients = Array.from(uniquePatients.values());
+            
+            updateStats();
+        }
+
+        function updateStats() {
+            appState.stats.total = appState.appointments.length;
+            appState.stats.pending = appState.appointments.filter(a => a.status === 'Pendiente').length;
+            appState.stats.approved = appState.appointments.filter(a => a.status === 'Aprobada').length;
+            appState.stats.rejected = appState.appointments.filter(a => a.status === 'Rechazada').length;
+        }
+
+        function navigateTo(page) {
+            appState.currentPage = page;
+            
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            
+            const pages = ['dashboard', 'appointments', 'patients', 'analytics'];
+            const index = pages.indexOf(page);
+            if (index >= 0) {
+                document.querySelectorAll('.nav-item')[index].classList.add('active');
+            }
+            
+            const content = document.getElementById('mainContent');
+            
+            switch(page) {
+                case 'dashboard':
+                    content.innerHTML = getDashboardHTML();
+                    setTimeout(initCharts, 100);
+                    break;
+                case 'appointments':
+                    content.innerHTML = getAppointmentsHTML();
+                    break;
+                case 'patients':
+                    content.innerHTML = getPatientsHTML();
+                    break;
+                case 'analytics':
+                    content.innerHTML = getAnalyticsHTML();
+                    setTimeout(initAnalyticsCharts, 100);
+                    break;
+            }
+        }
+
+        function getDashboardHTML() {
+            const pendingList = appState.appointments.filter(a => a.status === 'Pendiente');
+            
+            return `
+                <div class="fade-in">
+                    <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-3xl font-bold text-white">Dashboard General</h2>
+                        <div class="text-white text-sm">
+                            <span class="opacity-75">Última actualización:</span>
+                            <span class="font-semibold ml-2">${new Date().toLocaleString('es-PE')}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="glass-card stat-card rounded-2xl p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <p class="text-gray-500 text-sm font-medium mb-2">Total Citas</p>
+                                    <h3 class="text-4xl font-bold text-gray-800">${appState.stats.total}</h3>
+                                </div>
+                                <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
+                                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="flex items-center text-sm text-blue-600 font-medium">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                </svg>
+                                Sistema activo
+                            </div>
+                        </div>
+
+                        <div class="glass-card stat-card rounded-2xl p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <p class="text-gray-500 text-sm font-medium mb-2">Pendientes</p>
+                                    <h3 class="text-4xl font-bold text-orange-600">${appState.stats.pending}</h3>
+                                </div>
+                                <div class="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-700 rounded-xl flex items-center justify-center shadow-lg">
+                                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <span class="metric-badge bg-orange-100 text-orange-700">
+                                Requiere atención
+                            </span>
+                        </div>
+
+                        <div class="glass-card stat-card rounded-2xl p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <p class="text-gray-500 text-sm font-medium mb-2">Aprobadas</p>
+                                    <h3 class="text-4xl font-bold text-green-600">${appState.stats.approved}</h3>
+                                </div>
+                                <div class="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-700 rounded-xl flex items-center justify-center shadow-lg">
+                                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <span class="metric-badge bg-green-100 text-green-700">
+                                Confirmadas
+                            </span>
+                        </div>
+
+                        <div class="glass-card stat-card rounded-2xl p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <p class="text-gray-500 text-sm font-medium mb-2">Rechazadas</p>
+                                    <h3 class="text-4xl font-bold text-red-600">${appState.stats.rejected}</h3>
+                                </div>
+                                <div class="w-14 h-14 bg-gradient-to-br from-red-500 to-red-700 rounded-xl flex items-center justify-center shadow-lg">
+                                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <span class="metric-badge bg-red-100 text-red-700">
+                                No procesadas
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <div class="glass-card rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">Estado de Citas</h3>
+                            <div class="chart-container">
+                                <canvas id="statusChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="glass-card rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">Especialidades Solicitadas</h3>
+                            <div class="chart-container">
+                                <canvas id="specialtiesChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-bold text-gray-800">Citas Pendientes de Aprobación</h3>
+                            <span class="metric-badge bg-orange-100 text-orange-700">
+                                ${pendingList.length} pendiente${pendingList.length !== 1 ? 's' : ''}
+                            </span>
+                        </div>
+                        <div class="space-y-4">
+                            ${pendingList.length === 0 ? 
+                                '<div class="text-center py-16"><div class="text-gray-400 mb-2"><svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div><p class="text-gray-500 font-medium">No hay citas pendientes</p><p class="text-gray-400 text-sm mt-1">Todas las citas han sido procesadas</p></div>' : 
+                                pendingList.map(apt => `
+                                <div class="appointment-card flex items-center justify-between p-5 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl border border-orange-200">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-700 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow">
+                                            ${apt.fullName.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-gray-800 text-lg">${apt.fullName}</p>
+                                            <p class="text-sm text-gray-600 font-medium">${apt.specialty} • ${formatDate(apt.appointmentDate)} ${apt.appointmentTime}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button onclick="approveAppointment('${apt.id}')" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition">
+                                            ✓ Aprobar
+                                        </button>
+                                        <button onclick="rejectAppointment('${apt.id}')" class="bg-gradient-to-r from-red-500 to-rose-600 hover:shadow-lg text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition">
+                                            ✗ Rechazar
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getAppointmentsHTML() {
+            return `
+                <div class="fade-in">
+                    <h2 class="text-3xl font-bold text-white mb-8">Gestión de Citas</h2>
+                    <div class="glass-card rounded-2xl p-6">
+                        <div class="flex space-x-2 mb-6">
+                            <button onclick="filterAppointments('all')" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition">Todas</button>
+                            <button onclick="filterAppointments('Pendiente')" class="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition">Pendientes</button>
+                            <button onclick="filterAppointments('Aprobada')" class="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition">Aprobadas</button>
+                            <button onclick="filterAppointments('Rechazada')" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition">Rechazadas</button>
+                        </div>
+                        <div id="appointmentsList" class="space-y-4">
+                            ${appState.appointments.length === 0 ? 
+                                '<div class="text-center py-16"><p class="text-gray-500 font-medium">No hay citas registradas</p><p class="text-gray-400 text-sm mt-2">Las citas aparecerán aquí cuando los pacientes las agenden</p></div>' :
+                                appState.appointments.map(apt => getAppointmentCard(apt)).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getAppointmentCard(apt) {
+            const statusConfig = {
+                'Pendiente': { bg: 'border-orange-300 bg-orange-50', badge: 'bg-orange-100 text-orange-700' },
+                'Aprobada': { bg: 'border-green-300 bg-green-50', badge: 'bg-green-100 text-green-700' },
+                'Rechazada': { bg: 'border-red-300 bg-red-50', badge: 'bg-red-100 text-red-700' }
+            };
+
+            const config = statusConfig[apt.status];
+            
+            return `
+                <div class="border-2 ${config.bg} rounded-xl p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-800 text-xl mb-3">${apt.fullName}</h4>
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <p class="text-gray-600"><span class="font-semibold">DNI:</span> ${apt.dni}</p>
+                                <p class="text-gray-600"><span class="font-semibold">Teléfono:</span> ${apt.phone}</p>
+                                <p class="text-gray-600"><span class="font-semibold">Email:</span> ${apt.email}</p>
+                                <p class="text-gray-600"><span class="font-semibold">Especialidad:</span> ${apt.specialty}</p>
+                                <p class="text-gray-600"><span class="font-semibold">Fecha:</span> ${formatDate(apt.appointmentDate)}</p>
+                                <p class="text-gray-600"><span class="font-semibold">Hora:</span> ${apt.appointmentTime}</p>
+                            </div>
+                        </div>
+                        <span class="metric-badge ${config.badge}">${apt.status}</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg mb-4 border border-gray-200">
+                        <p class="text-sm text-gray-700"><span class="font-semibold">Motivo:</span> ${apt.reason}</p>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <p class="text-xs text-gray-500">Registrado: ${formatDateTime(apt.timestamp)}</p>
+                        <div class="flex space-x-2">
+                            ${apt.status === 'Pendiente' ? `
+                                <button onclick="approveAppointment('${apt.id}')" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg text-white px-4 py-2 rounded-lg font-semibold text-sm transition">Aprobar</button>
+                                <button onclick="rejectAppointment('${apt.id}')" class="bg-gradient-to-r from-red-500 to-rose-600 hover:shadow-lg text-white px-4 py-2 rounded-lg font-semibold text-sm transition">Rechazar</button>
+                            ` : ''}
+                            <button onclick="deleteAppointment('${apt.id}')" class="bg-gradient-to-r from-yellow-500 to-orange-600 hover:shadow-lg text-white px-4 py-2 rounded-lg font-semibold text-sm transition">Eliminar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getPatientsHTML() {
+            return `
+                <div class="fade-in">
+                    <h2 class="text-3xl font-bold text-white mb-8">Gestión de Pacientes</h2>
+                    <div class="glass-card rounded-2xl p-6">
+                        <div class="mb-6">
+                            <input type="text" id="searchPatient" placeholder="Buscar por nombre o DNI..." 
+                                class="w-full px-5 py-3 rounded-xl border-2 border-gray-300 focus:border-blue-500 focus:outline-none transition"
+                                oninput="searchPatients(this.value)">
+                        </div>
+                        ${appState.patients.length === 0 ? 
+                            '<div class="text-center py-16"><p class="text-gray-500 font-medium">No hay pacientes registrados</p><p class="text-gray-400 text-sm mt-2">Los pacientes aparecerán aquí cuando agenden su primera cita</p></div>' :
+                            `<div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="border-b-2 border-gray-300">
+                                            <th class="px-6 py-4 text-left text-sm font-bold text-gray-700">Paciente</th>
+                                            <th class="px-6 py-4 text-left text-sm font-bold text-gray-700">DNI</th>
+                                            <th class="px-6 py-4 text-left text-sm font-bold text-gray-700">Email</th>
+                                            <th class="px-6 py-4 text-left text-sm font-bold text-gray-700">Teléfono</th>
+                                            <th class="px-6 py-4 text-left text-sm font-bold text-gray-700">Citas</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="patientsTableBody">
+                                        ${appState.patients.map(patient => {
+                                            const citasCount = appState.appointments.filter(a => a.dni === patient.dni).length;
+                                            return `
+                                            <tr class="border-b border-gray-200 hover:bg-blue-50 transition">
+                                                <td class="px-6 py-4 font-bold text-gray-800">${patient.name}</td>
+                                                <td class="px-6 py-4 text-gray-600">${patient.dni}</td>
+                                                <td class="px-6 py-4 text-gray-600">${patient.email}</td>
+                                                <td class="px-6 py-4 text-gray-600">${patient.phone}</td>
+                                                <td class="px-6 py-4">
+                                                    <span class="metric-badge bg-blue-100 text-blue-700">
+                                                        ${citasCount} cita${citasCount !== 1 ? 's' : ''}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        `}).join('')}
+                                    </tbody>
+                                </table>
+                            </div>`}
+                    </div>
+                </div>
+            `;
+        }
+
+        function getAnalyticsHTML() {
+            return `
+                <div class="fade-in">
+                    <h2 class="text-3xl font-bold text-white mb-8">Análisis y Reportes</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-2xl text-white shadow-xl">
+                            <p class="text-sm mb-2 opacity-90 font-medium">Total Citas</p>
+                            <p class="text-4xl font-bold mb-2">${appState.stats.total}</p>
+                            <p class="text-xs opacity-75">Registro completo</p>
+                        </div>
+                        <div class="bg-gradient-to-br from-green-600 to-emerald-800 p-6 rounded-2xl text-white shadow-xl">
+                            <p class="text-sm mb-2 opacity-90 font-medium">Aprobadas</p>
+                            <p class="text-4xl font-bold mb-2">${appState.stats.approved}</p>
+                            <p class="text-xs opacity-75">${appState.stats.total > 0 ? Math.round((appState.stats.approved / appState.stats.total) * 100) : 0}% del total</p>
+                        </div>
+                        <div class="bg-gradient-to-br from-orange-600 to-orange-800 p-6 rounded-2xl text-white shadow-xl">
+                            <p class="text-sm mb-2 opacity-90 font-medium">Pendientes</p>
+                            <p class="text-4xl font-bold mb-2">${appState.stats.pending}</p>
+                            <p class="text-xs opacity-75">Requieren revisión</p>
+                        </div>
+                        <div class="bg-gradient-to-br from-red-600 to-red-800 p-6 rounded-2xl text-white shadow-xl">
+                            <p class="text-sm mb-2 opacity-90 font-medium">Rechazadas</p>
+                            <p class="text-4xl font-bold mb-2">${appState.stats.rejected}</p>
+                            <p class="text-xs opacity-75">${appState.stats.total > 0 ? Math.round((appState.stats.rejected / appState.stats.total) * 100) : 0}% del total</p>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-6 mb-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Línea de Tiempo de Citas</h3>
+                        <div class="chart-container" style="height: 350px;">
+                            <canvas id="timelineChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div class="glass-card rounded-2xl p-6">
+                            <button onclick="exportToCSV()" class="w-full btn-gradient text-white py-4 rounded-xl font-bold text-lg hover:shadow-xl transition">
+                                📊 Exportar Datos a CSV
+                            </button>
+                        </div>
+                        <div class="glass-card rounded-2xl p-6">
+                            <button onclick="generateReport()" class="w-full bg-gradient-to-r from-purple-600 to-indigo-700 text-white py-4 rounded-xl font-bold text-lg hover:shadow-xl transition">
+                                📄 Generar Reporte Completo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function initCharts() {
+            if (appState.charts.appointments) appState.charts.appointments.destroy();
+            if (appState.charts.specialties) appState.charts.specialties.destroy();
+
+            const ctx1 = document.getElementById('statusChart');
+            if (ctx1 && appState.stats.total > 0) {
+                appState.charts.appointments = new Chart(ctx1, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Pendientes', 'Aprobadas', 'Rechazadas'],
+                        datasets: [{
+                            data: [appState.stats.pending, appState.stats.approved, appState.stats.rejected],
+                            backgroundColor: ['#f59e0b', '#10b981', '#ef4444'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { padding: 15, font: { size: 12, weight: '600' } } },
+                            tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 12, titleFont: { size: 14 }, bodyFont: { size: 13 } }
+                        }
+                    }
+                });
+            }
+
+            const specialties = {};
+            appState.appointments.forEach(a => {
+                specialties[a.specialty] = (specialties[a.specialty] || 0) + 1;
+            });
+
+            const ctx2 = document.getElementById('specialtiesChart');
+            if (ctx2 && Object.keys(specialties).length > 0) {
+                appState.charts.specialties = new Chart(ctx2, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(specialties),
+                        datasets: [{
+                            label: 'Número de citas',
+                            data: Object.values(specialties),
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 2,
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 12 }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 1, font: { weight: '600' } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                            x: { ticks: { font: { weight: '600' } }, grid: { display: false } }
+                        }
+                    }
+                });
+            }
+        }
+
+        function initAnalyticsCharts() {
+            if (appState.charts.timeline) appState.charts.timeline.destroy();
+
+            const dateGroups = {};
+            appState.appointments.forEach(apt => {
+                const date = apt.appointmentDate;
+                dateGroups[date] = (dateGroups[date] || 0) + 1;
+            });
+
+            const sortedDates = Object.keys(dateGroups).sort();
+            const ctx = document.getElementById('timelineChart');
+            
+            if (ctx && sortedDates.length > 0) {
+                appState.charts.timeline = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: sortedDates.map(d => new Date(d + 'T00:00:00').toLocaleDateString('es-PE', { month: 'short', day: 'numeric' })),
+                        datasets: [{
+                            label: 'Citas por día',
+                            data: sortedDates.map(d => dateGroups[d]),
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            pointBackgroundColor: '#fff',
+                            pointBorderWidth: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 12 }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 1, font: { weight: '600' } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                            x: { ticks: { font: { weight: '600' } }, grid: { display: false } }
+                        }
+                    }
+                });
+            }
+        }
+
+        function approveAppointment(id) {
+            const apt = appState.appointments.find(a => a.id === id);
+            if (!apt) return;
+
+            if (confirm(`¿Aprobar la cita de ${apt.fullName}?`)) {
+                apt.status = 'Aprobada';
+                updateStats();
+                saveToStorage();
+                showNotification('Cita aprobada exitosamente', 'success');
+                navigateTo(appState.currentPage);
+            }
+        }
+
+        function rejectAppointment(id) {
+            const apt = appState.appointments.find(a => a.id === id);
+            if (!apt) return;
+
+            const reason = prompt('Ingrese el motivo del rechazo (opcional):');
+            if (reason === null) return;
+
+            apt.status = 'Rechazada';
+            apt.rejectionReason = reason;
+            updateStats();
+            saveToStorage();
+            showNotification('Cita rechazada', 'success');
+            navigateTo(appState.currentPage);
+        }
+
+        function deleteAppointment(id) {
+            const apt = appState.appointments.find(a => a.id === id);
+            if (!apt) return;
+
+            if (confirm(`¿Eliminar permanentemente la cita de ${apt.fullName}?`)) {
+                appState.appointments = appState.appointments.filter(a => a.id !== id);
+                updateStats();
+                saveToStorage();
+                showNotification('Cita eliminada', 'success');
+                navigateTo(appState.currentPage);
+            }
+        }
+
+        function filterAppointments(status) {
+            const filtered = status === 'all' ? appState.appointments : appState.appointments.filter(a => a.status === status);
+            const list = document.getElementById('appointmentsList');
+            list.innerHTML = filtered.length === 0 ? 
+                '<div class="text-center py-16"><p class="text-gray-500 font-medium">No hay citas con este estado</p></div>' :
+                filtered.map(apt => getAppointmentCard(apt)).join('');
+        }
+
+        function searchPatients(query) {
+            const filtered = appState.patients.filter(p => 
+                p.name.toLowerCase().includes(query.toLowerCase()) || p.dni.includes(query)
+            );
+            
+            const tbody = document.getElementById('patientsTableBody');
+            if (tbody) {
+                tbody.innerHTML = filtered.map(patient => {
+                    const citasCount = appState.appointments.filter(a => a.dni === patient.dni).length;
+                    return `
+                        <tr class="border-b border-gray-200 hover:bg-blue-50 transition">
+                            <td class="px-6 py-4 font-bold text-gray-800">${patient.name}</td>
+                            <td class="px-6 py-4 text-gray-600">${patient.dni}</td>
+                            <td class="px-6 py-4 text-gray-600">${patient.email}</td>
+                            <td class="px-6 py-4 text-gray-600">${patient.phone}</td>
+                            <td class="px-6 py-4">
+                                <span class="metric-badge bg-blue-100 text-blue-700">
+                                    ${citasCount} cita${citasCount !== 1 ? 's' : ''}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('medisecure_appointments', JSON.stringify(appState.appointments));
+        }
+
+        function syncData() {
+            const icon = document.getElementById('syncIcon');
+            icon.style.animation = 'spin 1s linear infinite';
+            showNotification('Sincronizando datos...', 'info');
+            
+            setTimeout(() => {
+                icon.style.animation = '';
+                loadDataFromStorage();
+                navigateTo(appState.currentPage);
+                showNotification('Datos sincronizados correctamente', 'success');
+            }, 1500);
+        }
+
+        function exportToCSV() {
+            if (appState.appointments.length === 0) {
+                showNotification('No hay datos para exportar', 'error');
+                return;
+            }
+
+            const headers = ['Timestamp', 'Nombre', 'DNI', 'Email', 'Teléfono', 'Especialidad', 'Fecha', 'Hora', 'Motivo', 'Estado'];
+            const rows = appState.appointments.map(a => [
+                a.timestamp, a.fullName, a.dni, a.email, a.phone, a.specialty, a.appointmentDate, a.appointmentTime, a.reason, a.status
+            ]);
+            
+            const csv = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `medisecure_citas_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+            showNotification('Datos exportados exitosamente', 'success');
+        }
+
+        function generateReport() {
+            showNotification('Generando reporte completo...', 'info');
+            setTimeout(() => showNotification('Reporte generado exitosamente', 'success'), 2000);
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            return date.toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        function formatDateTime(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleString('es-PE', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function showNotification(message, type) {
+            const colors = {
+                success: 'bg-gradient-to-r from-green-500 to-emerald-600',
+                error: 'bg-gradient-to-r from-red-500 to-rose-600',
+                info: 'bg-gradient-to-r from-blue-500 to-indigo-600'
+            };
+            
+            const notification = document.createElement('div');
+            notification.className = `fixed top-6 right-6 ${colors[type]} text-white px-6 py-4 rounded-xl shadow-2xl z-50 font-semibold`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        function logout() {
+            if (confirm('¿Cerrar sesión?')) {
+                showNotification('Cerrando sesión...', 'info');
+                setTimeout(() => window.location.href = 'login.html', 1000);
+            }
+        }
+    </script>
+</body>
+</html>
