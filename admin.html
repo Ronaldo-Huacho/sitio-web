@@ -852,35 +852,55 @@
 
 <ul id="listaConsultas"></ul>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-  import { getFirestore, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    <script type="module">
+    // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBsaiLtrnJU8wCGB-N5sBknJtrsPXncQ_A",
-    authDomain: "medi-derecho.firebaseapp.com",
-    projectId: "medi-derecho",
-    storageBucket: "medi-derecho.firebasestorage.app",
-    messagingSenderId: "685600947401",
-    appId: "1:685600947401:web:88c485e0703885038ce118",
-    measurementId: "G-18G5S9ER2M"
-  };
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBsaiLtrnJU8wCGB-N5sBknJtrsPXncQ_A",
+  authDomain: "medi-derecho.firebaseapp.com",
+  projectId: "medi-derecho",
+  storageBucket: "medi-derecho.firebasestorage.app",
+  messagingSenderId: "685600947401",
+  appId: "1:685600947401:web:88c485e0703885038ce118",
+  measurementId: "G-18G5S9ER2M"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
-  const lista = document.getElementById("listaConsultas");
-  const q = query(collection(db, "consultas"), orderBy("fecha", "desc"));
+import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
 
-  onSnapshot(q, (snapshot) => {
-    lista.innerHTML = "";
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      const li = document.createElement("li");
-      li.textContent = `${data.nombre} - ${data.motivo}`;
-      lista.appendChild(li);
+// Conectar con Firestore
+const db = getFirestore(app);
+
+// Suponiendo que tienes un formulario con id="formConsulta"
+const form = document.getElementById("formConsulta");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const nombre = document.getElementById("nombre").value;
+  const motivo = document.getElementById("motivo").value;
+
+  try {
+    await addDoc(collection(db, "consultas"), {
+      nombre: nombre,
+      motivo: motivo,
+      fecha: serverTimestamp()
     });
-  });
+    alert("✅ Consulta enviada correctamente");
+    form.reset();
+  } catch (error) {
+    console.error("Error al enviar consulta:", error);
+  }
+});
 </script>
 
 </body> 
