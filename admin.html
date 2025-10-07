@@ -711,7 +711,25 @@
                 showNotification('Cita aprobada exitosamente', 'success');
                 navigateTo(appState.currentPage);
             }
-        }
+        }function approveAppointment(id) {
+    const apt = appState.appointments.find(a => a.id === id);
+    if (!apt) return;
+
+    if (confirm(`¿Aprobar la cita de ${apt.fullName}?`)) {
+        apt.status = 'Aprobada';
+        updateStats();
+        saveToStorage();
+        showNotification('Cita aprobada exitosamente', 'success');
+        navigateTo(appState.currentPage);
+
+        // Enviar mensaje por WhatsApp
+        const phone = apt.phone.replace(/\D/g, ''); // elimina caracteres no numéricos
+        const message = `Hola ${apt.fullName}, tu cita ha sido aprobada y se realizará el ${formatDate(apt.appointmentDate)} a las ${apt.appointmentTime}.`;
+        const whatsappURL = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappURL, '_blank');
+    }
+}
+
 
         function rejectAppointment(id) {
             const apt = appState.appointments.find(a => a.id === id);
